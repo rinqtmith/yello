@@ -10,6 +10,14 @@ Yello is a local-first Pomodoro desktop app built with Electron, React, TypeScri
 - `pnpm test` runs the unit test suite
 - `pnpm build` creates a production build
 
+## pnpm Note
+
+This repo trusts the required Electron and esbuild install scripts through `package.json#pnpm.onlyBuiltDependencies`.
+
+If a machine already installed dependencies before that setting existed and `pnpm dev` fails with `Electron failed to install correctly` or `Electron uninstall`, run:
+
+- `pnpm rebuild electron esbuild`
+
 ## Branch Flow
 
 - `main` stays stable
