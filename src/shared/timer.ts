@@ -19,17 +19,23 @@ export const startTimer = (state: TimerState, now: number): TimerState => ({
   endsAt: now + state.remainingSeconds * 1000
 })
 
+export const getRemainingSeconds = (state: TimerState, now: number) => {
+  if (state.endsAt === null) {
+    return state.remainingSeconds
+  }
+
+  return Math.max(0, Math.ceil((state.endsAt - now) / 1000))
+}
+
 export const pauseTimer = (state: TimerState, now: number): TimerState => {
   if (state.status !== 'running' || state.endsAt === null) {
     return { ...state, status: 'paused', endsAt: null }
   }
 
-  const remainingSeconds = Math.max(0, Math.ceil((state.endsAt - now) / 1000))
-
   return {
     ...state,
     status: 'paused',
-    remainingSeconds,
+    remainingSeconds: getRemainingSeconds(state, now),
     endsAt: null
   }
 }
@@ -48,7 +54,7 @@ export const syncTimer = (state: TimerState, now: number): TimerState => {
 
   return {
     ...state,
-    remainingSeconds: Math.max(0, Math.ceil((state.endsAt - now) / 1000))
+    remainingSeconds: getRemainingSeconds(state, now)
   }
 }
 

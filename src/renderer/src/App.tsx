@@ -2,7 +2,15 @@ import { useEffect, useMemo, useState } from 'react'
 import { DEFAULT_CONFIG, createInitialTimerState } from '@shared/defaults'
 import { rehydrateTimerState } from '@shared/timer'
 import type { SessionRecord, StorageShape, TimerConfig, TimerMode, TimerState } from '@shared/types'
-import { applyMode, completeCurrentMode, getDurationSeconds, pauseTimer, resetTimer, startTimer, syncTimer } from '@shared/timer'
+import {
+  applyMode,
+  completeCurrentMode,
+  getDurationSeconds,
+  getRemainingSeconds,
+  pauseTimer,
+  resetTimer,
+  startTimer
+} from '@shared/timer'
 
 const pad = (value: number) => value.toString().padStart(2, '0')
 
@@ -39,6 +47,7 @@ export const App = () => {
   const [history, setHistory] = useState<SessionRecord[]>([])
   const [appVersion, setAppVersion] = useState('0.1.0')
   const [hydrated, setHydrated] = useState(false)
+  const [nowMs, setNowMs] = useState(() => Date.now())
 
   useEffect(() => {
     let mounted = true
@@ -96,37 +105,57 @@ export const App = () => {
       return
     }
 
+    setNowMs(Date.now())
     const interval = window.setInterval(() => {
-      setTimerState((current) => {
-        const synced = syncTimer(current, Date.now())
-
-        if (synced.remainingSeconds > 0) {
-          return synced
-        }
-
-        const completion = completeCurrentMode(synced, settings, Date.now())
-
-        if (settings.soundEnabled) {
-          playChime()
-        }
-
-        if (settings.notificationsEnabled) {
-          void window.yello.notifications.notifySessionChange({
-            completedMode: synced.mode,
-            nextMode: completion.nextMode
-          })
-        }
-
-        setHistory((existing) => [completion.sessionRecord, ...existing].slice(0, 30))
-        return completion.nextState
-      })
-    }, 250)
+      setNowMs(Date.now())
+    }, 100)
 
     return () => window.clearInterval(interval)
-  }, [hydrated, settings, timerState.status])
+  }, [hydrated, timerState.status])
+
+  useEffect(() => {
+    if (!hydrated || timerState.status !== 'running' || timerState.endsAt === null || timerState.endsAt > nowMs) {
+      return
+    }
+
+    setTimerState((current) => {
+      if (current.status !== 'running' || current.endsAt === null || current.endsAt > Date.now()) {
+        return current
+      }
+
+      const completion = completeCurrentMode(current, settings, Date.now())
+
+      if (settings.soundEnabled) {
+        playChime()
+      }
+
+      if (settings.notificationsEnabled) {
+        void window.yello.notifications.notifySessionChange({
+          completedMode: current.mode,
+          nextMode: completion.nextMode
+        })
+      }
+
+      setHistory((existing) => [completion.sessionRecord, ...existing].slice(0, 30))
+      return completion.nextState
+    })
+  }, [hydrated, nowMs, settings, timerState.endsAt, timerState.status])
+
+  const visibleRemainingSeconds =
+    timerState.status === 'running' ? getRemainingSeconds(timerState, nowMs) : timerState.remainingSeconds
 
   const totalSecondsForMode = getDurationSeconds(settings, timerState.mode)
-  const progress = totalSecondsForMode === 0 ? 0 : timerState.remainingSeconds / totalSecondsForMode
+  const progress = useMemo(() => {
+    if (totalSecondsForMode === 0) {
+      return 0
+    }
+
+    if (timerState.status === 'running' && timerState.endsAt !== null) {
+      return Math.max(0, Math.min(1, (timerState.endsAt - nowMs) / (totalSecondsForMode * 1000)))
+    }
+
+    return Math.max(0, Math.min(1, timerState.remainingSeconds / totalSecondsForMode))
+  }, [nowMs, timerState.endsAt, timerState.remainingSeconds, timerState.status, totalSecondsForMode])
 
   const streakLabel = useMemo(() => {
     if (timerState.completedWorkSessions === 0) {
@@ -193,9 +222,12 @@ export const App = () => {
               )}deg, rgba(255,255,255,0.03) 0deg)`
             }}
           >
-            <div className="pulse-core">
+            <div className={timerState.status === 'running' ? 'pulse-core running' : 'pulse-core'}>
               <span className="mode-pill">{MODES.find((item) => item.mode === timerState.mode)?.label}</span>
-              <div className="time-readout">{formatSeconds(timerState.remainingSeconds)}</div>
+              <div className="time-readout">{formatSeconds(visibleRemainingSeconds)}</div>
+              <div className={timerState.status === 'running' ? 'status-chip running' : 'status-chip'}>
+                {timerState.status === 'running' ? 'Live now' : timerState.status}
+              </div>
               <div className="streak">{streakLabel}</div>
             </div>
           </div>
