@@ -47,7 +47,9 @@ export const App = () => {
   const [history, setHistory] = useState<SessionRecord[]>([])
   const [appVersion, setAppVersion] = useState('0.1.0')
   const [hydrated, setHydrated] = useState(false)
-  const [nowMs, setNowMs] = useState(() => Date.now())
+  const [displayRemainingSeconds, setDisplayRemainingSeconds] = useState(
+    createInitialTimerState(DEFAULT_CONFIG).remainingSeconds
+  )
 
   useEffect(() => {
     let mounted = true
@@ -62,8 +64,11 @@ export const App = () => {
         return
       }
 
+      const restoredTimerState = rehydrateTimerState(storage.timerState, storage.settings, Date.now())
+
       setSettings(storage.settings)
-      setTimerState(rehydrateTimerState(storage.timerState, storage.settings, Date.now()))
+      setTimerState(restoredTimerState)
+      setDisplayRemainingSeconds(restoredTimerState.remainingSeconds)
       setHistory(storage.history)
       setAppVersion(version)
       setHydrated(true)
@@ -102,19 +107,25 @@ export const App = () => {
 
   useEffect(() => {
     if (!hydrated || timerState.status !== 'running') {
+      setDisplayRemainingSeconds(timerState.remainingSeconds)
       return
     }
 
-    setNowMs(Date.now())
+    setDisplayRemainingSeconds(getRemainingSeconds(timerState, Date.now()))
     const interval = window.setInterval(() => {
-      setNowMs(Date.now())
-    }, 100)
+      setDisplayRemainingSeconds(getRemainingSeconds(timerState, Date.now()))
+    }, 200)
 
     return () => window.clearInterval(interval)
-  }, [hydrated, timerState.status])
+  }, [hydrated, timerState])
 
   useEffect(() => {
-    if (!hydrated || timerState.status !== 'running' || timerState.endsAt === null || timerState.endsAt > nowMs) {
+    if (
+      !hydrated ||
+      timerState.status !== 'running' ||
+      timerState.endsAt === null ||
+      displayRemainingSeconds > 0
+    ) {
       return
     }
 
@@ -139,10 +150,7 @@ export const App = () => {
       setHistory((existing) => [completion.sessionRecord, ...existing].slice(0, 30))
       return completion.nextState
     })
-  }, [hydrated, nowMs, settings, timerState.endsAt, timerState.status])
-
-  const visibleRemainingSeconds =
-    timerState.status === 'running' ? getRemainingSeconds(timerState, nowMs) : timerState.remainingSeconds
+  }, [displayRemainingSeconds, hydrated, settings, timerState.endsAt, timerState.status])
 
   const totalSecondsForMode = getDurationSeconds(settings, timerState.mode)
   const progress = useMemo(() => {
@@ -150,12 +158,9 @@ export const App = () => {
       return 0
     }
 
-    if (timerState.status === 'running' && timerState.endsAt !== null) {
-      return Math.max(0, Math.min(1, (timerState.endsAt - nowMs) / (totalSecondsForMode * 1000)))
-    }
-
-    return Math.max(0, Math.min(1, timerState.remainingSeconds / totalSecondsForMode))
-  }, [nowMs, timerState.endsAt, timerState.remainingSeconds, timerState.status, totalSecondsForMode])
+    const seconds = timerState.status === 'running' ? displayRemainingSeconds : timerState.remainingSeconds
+    return Math.max(0, Math.min(1, seconds / totalSecondsForMode))
+  }, [displayRemainingSeconds, timerState.remainingSeconds, timerState.status, totalSecondsForMode])
 
   const streakLabel = useMemo(() => {
     if (timerState.completedWorkSessions === 0) {
@@ -170,21 +175,30 @@ export const App = () => {
   }, [timerState.completedWorkSessions])
 
   const handleModeChange = (mode: TimerMode) => {
-    setTimerState(applyMode(mode, settings, timerState.completedWorkSessions))
+    const updatedTimerState = applyMode(mode, settings, timerState.completedWorkSessions)
+    setDisplayRemainingSeconds(updatedTimerState.remainingSeconds)
+    setTimerState(updatedTimerState)
   }
 
   const handleStartPause = () => {
     setTimerState((current) => {
       if (current.status === 'running') {
-        return pauseTimer(current, Date.now())
+        const pausedTimerState = pauseTimer(current, Date.now())
+        setDisplayRemainingSeconds(pausedTimerState.remainingSeconds)
+        return pausedTimerState
       }
 
+      setDisplayRemainingSeconds(current.remainingSeconds)
       return startTimer(current, Date.now())
     })
   }
 
   const handleReset = () => {
-    setTimerState((current) => resetTimer(current, settings))
+    setTimerState((current) => {
+      const resetTimerState = resetTimer(current, settings)
+      setDisplayRemainingSeconds(resetTimerState.remainingSeconds)
+      return resetTimerState
+    })
   }
 
   const updateSetting = <K extends keyof TimerConfig>(key: K, value: TimerConfig[K]) => {
@@ -195,7 +209,9 @@ export const App = () => {
           return currentTimer
         }
 
-        return applyMode(currentTimer.mode, next, currentTimer.completedWorkSessions)
+        const updatedTimerState = applyMode(currentTimer.mode, next, currentTimer.completedWorkSessions)
+        setDisplayRemainingSeconds(updatedTimerState.remainingSeconds)
+        return updatedTimerState
       })
       return next
     })
@@ -224,7 +240,7 @@ export const App = () => {
           >
             <div className={timerState.status === 'running' ? 'pulse-core running' : 'pulse-core'}>
               <span className="mode-pill">{MODES.find((item) => item.mode === timerState.mode)?.label}</span>
-              <div className="time-readout">{formatSeconds(visibleRemainingSeconds)}</div>
+              <div className="time-readout">{formatSeconds(displayRemainingSeconds)}</div>
               <div className={timerState.status === 'running' ? 'status-chip running' : 'status-chip'}>
                 {timerState.status === 'running' ? 'Live now' : timerState.status}
               </div>
