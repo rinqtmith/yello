@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { DEFAULT_CONFIG, createInitialTimerState } from '@shared/defaults'
 import { rehydrateTimerState } from '@shared/timer'
 import type { SessionRecord, StorageShape, TimerConfig, TimerMode, TimerState } from '@shared/types'
@@ -26,6 +26,8 @@ const MODES: { label: string; mode: TimerMode }[] = [
   { label: 'Long break', mode: 'longBreak' }
 ]
 
+const clampSeconds = (value: number, max: number) => Math.min(Math.max(0, value), max)
+
 const playChime = () => {
   const context = new AudioContext()
   const oscillator = context.createOscillator()
@@ -50,6 +52,7 @@ export const App = () => {
   const [displayRemainingSeconds, setDisplayRemainingSeconds] = useState(
     createInitialTimerState(DEFAULT_CONFIG).remainingSeconds
   )
+  const timerStateRef = useRef<TimerState>(createInitialTimerState(DEFAULT_CONFIG))
 
   useEffect(() => {
     let mounted = true
@@ -68,7 +71,9 @@ export const App = () => {
 
       setSettings(storage.settings)
       setTimerState(restoredTimerState)
-      setDisplayRemainingSeconds(restoredTimerState.remainingSeconds)
+      setDisplayRemainingSeconds(
+        clampSeconds(restoredTimerState.remainingSeconds, getDurationSeconds(storage.settings, restoredTimerState.mode))
+      )
       setHistory(storage.history)
       setAppVersion(version)
       setHydrated(true)
@@ -106,18 +111,26 @@ export const App = () => {
   }, [hydrated, history])
 
   useEffect(() => {
+    timerStateRef.current = timerState
+  }, [timerState])
+
+  useEffect(() => {
     if (!hydrated || timerState.status !== 'running') {
-      setDisplayRemainingSeconds(timerState.remainingSeconds)
+      const duration = getDurationSeconds(settings, timerState.mode)
+      setDisplayRemainingSeconds(clampSeconds(timerState.remainingSeconds, duration))
       return
     }
 
-    setDisplayRemainingSeconds(getRemainingSeconds(timerState, Date.now()))
+    const duration = getDurationSeconds(settings, timerState.mode)
+    setDisplayRemainingSeconds(clampSeconds(getRemainingSeconds(timerState, Date.now()), duration))
     const interval = window.setInterval(() => {
-      setDisplayRemainingSeconds(getRemainingSeconds(timerState, Date.now()))
-    }, 200)
+      const current = timerStateRef.current
+      const total = getDurationSeconds(settings, current.mode)
+      setDisplayRemainingSeconds(clampSeconds(getRemainingSeconds(current, Date.now()), total))
+    }, 250)
 
     return () => window.clearInterval(interval)
-  }, [hydrated, timerState])
+  }, [hydrated, settings, timerState.status, timerState.mode, timerState.remainingSeconds])
 
   useEffect(() => {
     if (
@@ -188,8 +201,13 @@ export const App = () => {
         return pausedTimerState
       }
 
-      setDisplayRemainingSeconds(current.remainingSeconds)
-      return startTimer(current, Date.now())
+      const duration = getDurationSeconds(settings, current.mode)
+      const nextRemainingSeconds = current.status === 'idle'
+        ? duration
+        : clampSeconds(current.remainingSeconds, duration)
+      const nextState = startTimer({ ...current, remainingSeconds: nextRemainingSeconds }, Date.now())
+      setDisplayRemainingSeconds(nextRemainingSeconds)
+      return nextState
     })
   }
 
