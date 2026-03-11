@@ -38,14 +38,16 @@ const createWindow = async () => {
   const window = new BrowserWindow({
     width: 1180,
     height: 760,
-    minWidth: 980,
-    minHeight: 680,
+    resizable: false,
+    maximizable: false,
+    fullscreenable: false,
     backgroundColor: '#0d1321',
     titleBarStyle: 'hiddenInset',
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       contextIsolation: true,
-      nodeIntegration: false
+      nodeIntegration: false,
+      devTools: false
     }
   })
 
