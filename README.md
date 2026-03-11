@@ -39,6 +39,7 @@ The release workflow publishes:
 - Linux: `AppImage`
 
 Note: macOS `.icns` is generated during the release workflow from `assets/icon.png`.
+Local macOS packaging runs `pnpm run prepare:icons` as part of `pnpm pack` and `pnpm release`.
 
 ## Branch Flow
 

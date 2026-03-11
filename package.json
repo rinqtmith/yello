@@ -11,8 +11,9 @@
   "scripts": {
     "dev": "electron-vite dev",
     "build": "pnpm typecheck && electron-vite build",
-    "pack": "electron-vite build && electron-builder --publish never",
-    "release": "electron-vite build && electron-builder --publish always",
+    "prepare:icons": "bash scripts/prepare-icons.sh",
+    "pack": "pnpm run prepare:icons && electron-vite build && electron-builder --publish never",
+    "release": "pnpm run prepare:icons && electron-vite build && electron-builder --publish always",
     "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.node.json",
     "test": "vitest run",
     "test:watch": "vitest"
