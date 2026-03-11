@@ -12,6 +12,8 @@ permissions:
 jobs:
   test:
     runs-on: ubuntu-latest
+    env:
+      PNPM_STORE_PATH: ${{ github.workspace }}/.pnpm-store
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -23,6 +25,18 @@ jobs:
 
       - name: Install pnpm
         run: npm i -g pnpm@10.28.2
+      
+      - name: Configure pnpm store
+        shell: bash
+        run: pnpm config set store-dir "$PNPM_STORE_PATH"
+
+      - name: Cache pnpm store
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.PNPM_STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
 
       - name: Install
         run: pnpm install --frozen-lockfile
