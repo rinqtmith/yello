@@ -20,8 +20,10 @@ const createWindow = async () => {
     }
   })
 
-  if (process.env.VITE_DEV_SERVER_URL) {
-    await window.loadURL(process.env.VITE_DEV_SERVER_URL)
+  const devServerUrl = process.env.ELECTRON_RENDERER_URL ?? process.env.VITE_DEV_SERVER_URL
+
+  if (devServerUrl) {
+    await window.loadURL(devServerUrl)
   } else {
     await window.loadFile(join(__dirname, '../renderer/index.html'))
   }
