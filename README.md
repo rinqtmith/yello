@@ -40,7 +40,7 @@ The release workflow publishes:
 
 ## Branch Flow
 
-- `main` stays stable
+- `main` stays stable and is updated only via PRs
 - `feat/<scope>` for features
 - `fix/<scope>` for bugs and regressions
 - `chore/<scope>` for tooling, refactors, and maintenance

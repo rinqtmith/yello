@@ -7,6 +7,7 @@ Build Yello as a local-first Pomodoro desktop app. Favor a reliable timer flow, 
 ## Repo Rules
 
 - Keep `main` stable and do work on topic branches.
+- Merge to `main` only via PRs.
 - Use branch names `feat/<scope>`, `fix/<scope>`, `chore/<scope>`, and `docs/<scope>`.
 - Do not add backend, auth, or sync abstractions unless a task explicitly requires them.
 - Keep Electron APIs behind preload IPC. Renderer code should not reach directly into Electron or Node.
