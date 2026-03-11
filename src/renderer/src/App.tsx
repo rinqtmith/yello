@@ -53,6 +53,7 @@ export const App = () => {
     createInitialTimerState(DEFAULT_CONFIG).remainingSeconds
   )
   const timerStateRef = useRef<TimerState>(createInitialTimerState(DEFAULT_CONFIG))
+  const settingsRef = useRef<TimerConfig>(DEFAULT_CONFIG)
 
   useEffect(() => {
     let mounted = true
@@ -109,6 +110,10 @@ export const App = () => {
 
     void window.yello.store.saveHistory(history)
   }, [hydrated, history])
+
+  useEffect(() => {
+    settingsRef.current = settings
+  }, [settings])
 
   useEffect(() => {
     timerStateRef.current = timerState
@@ -187,6 +192,55 @@ export const App = () => {
     return `${timerState.completedWorkSessions} focus rounds done`
   }, [timerState.completedWorkSessions])
 
+  const toggleTimer = () => {
+    setTimerState((current) => {
+      const activeSettings = settingsRef.current
+
+      if (current.status === 'running') {
+        const pausedTimerState = pauseTimer(current, Date.now())
+        setDisplayRemainingSeconds(pausedTimerState.remainingSeconds)
+        return pausedTimerState
+      }
+
+      const duration = getDurationSeconds(activeSettings, current.mode)
+      const nextRemainingSeconds =
+        current.status === 'idle' ? duration : clampSeconds(current.remainingSeconds, duration)
+      const nextState = startTimer({ ...current, remainingSeconds: nextRemainingSeconds }, Date.now())
+
+      setDisplayRemainingSeconds(nextRemainingSeconds)
+      return nextState
+    })
+  }
+
+  const resetTimerState = () => {
+    setTimerState((current) => {
+      const resetTimerStateValue = resetTimer(current, settingsRef.current)
+      setDisplayRemainingSeconds(resetTimerStateValue.remainingSeconds)
+      return resetTimerStateValue
+    })
+  }
+
+  useEffect(() => {
+    if (!window.yello?.tray?.onCommand) {
+      return
+    }
+
+    const unsubscribe = window.yello.tray.onCommand((command) => {
+      if (command === 'toggle') {
+        toggleTimer()
+        return
+      }
+
+      if (command === 'reset') {
+        resetTimerState()
+      }
+    })
+
+    return () => {
+      unsubscribe()
+    }
+  }, [])
+
   const handleModeChange = (mode: TimerMode) => {
     const updatedTimerState = applyMode(mode, settings, timerState.completedWorkSessions)
     setDisplayRemainingSeconds(updatedTimerState.remainingSeconds)
@@ -194,29 +248,11 @@ export const App = () => {
   }
 
   const handleStartPause = () => {
-    setTimerState((current) => {
-      if (current.status === 'running') {
-        const pausedTimerState = pauseTimer(current, Date.now())
-        setDisplayRemainingSeconds(pausedTimerState.remainingSeconds)
-        return pausedTimerState
-      }
-
-      const duration = getDurationSeconds(settings, current.mode)
-      const nextRemainingSeconds = current.status === 'idle'
-        ? duration
-        : clampSeconds(current.remainingSeconds, duration)
-      const nextState = startTimer({ ...current, remainingSeconds: nextRemainingSeconds }, Date.now())
-      setDisplayRemainingSeconds(nextRemainingSeconds)
-      return nextState
-    })
+    toggleTimer()
   }
 
   const handleReset = () => {
-    setTimerState((current) => {
-      const resetTimerState = resetTimer(current, settings)
-      setDisplayRemainingSeconds(resetTimerState.remainingSeconds)
-      return resetTimerState
-    })
+    resetTimerState()
   }
 
   const updateSetting = <K extends keyof TimerConfig>(key: K, value: TimerConfig[K]) => {
