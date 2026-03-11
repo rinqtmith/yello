@@ -46,11 +46,10 @@ The release workflow publishes:
 - `chore/<scope>` for tooling, refactors, and maintenance
 - `docs/<scope>` for docs and process work
 
-Current implementation branch: `feat/bootstrap-electron-app`
-
 ## Current Scope
 
 - Standard desktop window
+- Minimize-to-tray with tray controls (show/hide, start/pause, reset, quit)
 - Focus, short break, and long break modes
 - Start, pause, and reset controls
 - Local settings and timer persistence
@@ -59,7 +58,6 @@ Current implementation branch: `feat/bootstrap-electron-app`
 
 ## Next Iteration Ideas
 
-- System tray support
 - Richer analytics
 - Task association for focus rounds
 - Packaging and release automation
