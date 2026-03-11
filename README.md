@@ -9,6 +9,8 @@ Yello is a local-first Pomodoro desktop app built with Electron, React, TypeScri
 - `pnpm typecheck` validates TypeScript across main, preload, renderer, and shared code
 - `pnpm test` runs the unit test suite
 - `pnpm build` creates a production build
+- `pnpm pack` builds a local installer bundle without publishing
+- `pnpm release` builds and publishes installers to GitHub Releases
 
 ## pnpm Note
 
@@ -17,6 +19,24 @@ This repo trusts the required Electron and esbuild install scripts through `pack
 If a machine already installed dependencies before that setting existed and `pnpm dev` fails with `Electron failed to install correctly` or `Electron uninstall`, run:
 
 - `pnpm rebuild electron esbuild`
+
+## Releases
+
+Releases are built and published by GitHub Actions on version tags.
+
+1. Bump `package.json` version (or run `pnpm version patch|minor|major`).
+2. Commit the version bump.
+3. Tag and push:
+
+```bash
+git tag v0.2.0
+git push origin main --tags
+```
+
+The release workflow publishes:
+- Windows: NSIS `.exe`
+- macOS: `.dmg`
+- Linux: `AppImage`
 
 ## Branch Flow
 

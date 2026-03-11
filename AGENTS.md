@@ -25,3 +25,9 @@ Build Yello as a local-first Pomodoro desktop app. Favor a reliable timer flow, 
 - Run `pnpm typecheck`
 - Run `pnpm test`
 - Run `pnpm build` when changes affect packaging, Electron wiring, or production config
+
+## Release Flow
+
+- Work on release changes in `feat/release-pipeline` or `chore/release-*`.
+- Tag releases as `vX.Y.Z` to trigger GitHub Actions builds.
+- Ensure `pnpm pack` succeeds before pushing a release tag.
