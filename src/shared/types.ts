@@ -38,6 +38,8 @@ export interface SessionNotificationPayload {
   nextMode: TimerMode
 }
 
+export type TrayCommand = 'toggle' | 'reset'
+
 export interface YelloApi {
   app: {
     getVersion: () => Promise<string>
@@ -50,5 +52,8 @@ export interface YelloApi {
     saveSettings: (settings: TimerConfig) => Promise<void>
     saveTimerState: (timerState: TimerState) => Promise<void>
     saveHistory: (history: SessionRecord[]) => Promise<void>
+  }
+  tray: {
+    onCommand: (handler: (command: TrayCommand) => void) => () => void
   }
 }

@@ -1,5 +1,12 @@
 import { contextBridge, ipcRenderer } from 'electron'
-import type { SessionNotificationPayload, SessionRecord, TimerConfig, TimerState, YelloApi } from '../shared/types'
+import type {
+  SessionNotificationPayload,
+  SessionRecord,
+  TimerConfig,
+  TimerState,
+  TrayCommand,
+  YelloApi
+} from '../shared/types'
 
 const api: YelloApi = {
   app: {
@@ -14,6 +21,16 @@ const api: YelloApi = {
     saveSettings: (settings: TimerConfig) => ipcRenderer.invoke('store:saveSettings', settings),
     saveTimerState: (timerState: TimerState) => ipcRenderer.invoke('store:saveTimerState', timerState),
     saveHistory: (history: SessionRecord[]) => ipcRenderer.invoke('store:saveHistory', history)
+  },
+  tray: {
+    onCommand: (handler: (command: TrayCommand) => void) => {
+      const listener = (_event: Electron.IpcRendererEvent, command: TrayCommand) => {
+        handler(command)
+      }
+
+      ipcRenderer.on('tray:command', listener)
+      return () => ipcRenderer.removeListener('tray:command', listener)
+    }
   }
 }
 
