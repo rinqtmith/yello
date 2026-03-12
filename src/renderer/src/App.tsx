@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { DEFAULT_CONFIG, createInitialTimerState } from '@shared/defaults'
-import { summarizeSessions } from '@shared/analytics'
+import { getLocalDateKey, summarizeSessions } from '@shared/analytics'
 import { rehydrateTimerState } from '@shared/timer'
 import type { SessionRecord, StorageShape, TimerConfig, TimerMode, TimerState } from '@shared/types'
 import {
@@ -28,6 +28,14 @@ const MODES: { label: string; mode: TimerMode }[] = [
 ]
 
 const clampSeconds = (value: number, max: number) => Math.min(Math.max(0, value), max)
+const HISTORY_RETENTION_DAYS = 30
+
+const getRetentionCutoff = (now: number, days: number) => {
+  const start = new Date(now)
+  start.setHours(0, 0, 0, 0)
+  start.setDate(start.getDate() - (days - 1))
+  return start.getTime()
+}
 
 const playChime = () => {
   const context = new AudioContext()
@@ -54,6 +62,7 @@ export const App = () => {
     createInitialTimerState(DEFAULT_CONFIG).remainingSeconds
   )
   const [activeTab, setActiveTab] = useState<'timer' | 'analytics'>('timer')
+  const [analyticsDayKey, setAnalyticsDayKey] = useState(() => getLocalDateKey(new Date()))
   const timerStateRef = useRef<TimerState>(createInitialTimerState(DEFAULT_CONFIG))
   const settingsRef = useRef<TimerConfig>(DEFAULT_CONFIG)
 
@@ -167,7 +176,13 @@ export const App = () => {
         })
       }
 
-      setHistory((existing) => [completion.sessionRecord, ...existing].slice(0, 200))
+      setHistory((existing) => {
+        const cutoff = getRetentionCutoff(Date.now(), HISTORY_RETENTION_DAYS)
+        return [completion.sessionRecord, ...existing].filter((entry) => {
+          const timestamp = new Date(entry.completedAt).getTime()
+          return Number.isFinite(timestamp) && timestamp >= cutoff
+        })
+      })
       return completion.nextState
     })
   }, [displayRemainingSeconds, hydrated, settings, timerState.endsAt, timerState.status])
@@ -273,7 +288,16 @@ export const App = () => {
     })
   }
 
-  const analytics = useMemo(() => summarizeSessions(history, new Date(), 7), [history])
+  useEffect(() => {
+    const interval = window.setInterval(() => {
+      const nextKey = getLocalDateKey(new Date())
+      setAnalyticsDayKey((current) => (current === nextKey ? current : nextKey))
+    }, 60_000)
+
+    return () => window.clearInterval(interval)
+  }, [])
+
+  const analytics = useMemo(() => summarizeSessions(history, new Date(), 7), [history, analyticsDayKey])
 
   return (
     <main className="shell">
