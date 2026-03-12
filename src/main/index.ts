@@ -47,7 +47,7 @@ const createWindow = async () => {
       preload: join(__dirname, '../preload/index.js'),
       contextIsolation: true,
       nodeIntegration: false,
-      devTools: false
+      devTools: !app.isPackaged
     }
   })
 
