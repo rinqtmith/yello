@@ -26,6 +26,26 @@ export interface SessionRecord {
   durationSeconds: number
 }
 
+export interface AnalyticsSummary {
+  rangeLabel: string
+  focusMinutes: number
+  breakMinutes: number
+  focusSessions: number
+  totalSessions: number
+  activeDays: number
+  currentStreak: number
+}
+
+export interface AnalyticsSummary {
+  rangeLabel: string
+  focusMinutes: number
+  breakMinutes: number
+  focusSessions: number
+  totalSessions: number
+  activeDays: number
+  currentStreak: number
+}
+
 export interface StorageShape {
   version: number
   settings: TimerConfig

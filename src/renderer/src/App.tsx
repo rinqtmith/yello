@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { DEFAULT_CONFIG, createInitialTimerState } from '@shared/defaults'
+import { summarizeSessions } from '@shared/analytics'
 import { rehydrateTimerState } from '@shared/timer'
 import type { SessionRecord, StorageShape, TimerConfig, TimerMode, TimerState } from '@shared/types'
 import {
@@ -52,6 +53,7 @@ export const App = () => {
   const [displayRemainingSeconds, setDisplayRemainingSeconds] = useState(
     createInitialTimerState(DEFAULT_CONFIG).remainingSeconds
   )
+  const [activeTab, setActiveTab] = useState<'timer' | 'analytics'>('timer')
   const timerStateRef = useRef<TimerState>(createInitialTimerState(DEFAULT_CONFIG))
   const settingsRef = useRef<TimerConfig>(DEFAULT_CONFIG)
 
@@ -165,7 +167,7 @@ export const App = () => {
         })
       }
 
-      setHistory((existing) => [completion.sessionRecord, ...existing].slice(0, 30))
+      setHistory((existing) => [completion.sessionRecord, ...existing].slice(0, 200))
       return completion.nextState
     })
   }, [displayRemainingSeconds, hydrated, settings, timerState.endsAt, timerState.status])
@@ -271,6 +273,8 @@ export const App = () => {
     })
   }
 
+  const analytics = useMemo(() => summarizeSessions(history, new Date(), 7), [history])
+
   return (
     <main className="shell">
       <section className="hero">
@@ -281,6 +285,20 @@ export const App = () => {
             A bright local-first Pomodoro desk companion with notifications, persistence, and
             enough personality to feel alive.
           </p>
+          <div className="tab-switch">
+            <button
+              className={activeTab === 'timer' ? 'tab-button active' : 'tab-button'}
+              onClick={() => setActiveTab('timer')}
+            >
+              Timer
+            </button>
+            <button
+              className={activeTab === 'analytics' ? 'tab-button active' : 'tab-button'}
+              onClick={() => setActiveTab('analytics')}
+            >
+              Analytics
+            </button>
+          </div>
         </div>
         <div className="pulse-card">
           <div
@@ -323,108 +341,151 @@ export const App = () => {
         </div>
       </section>
 
-      <section className="workspace">
-        <article className="panel settings-panel">
-          <div className="panel-head">
-            <h2>Session setup</h2>
-            <span>Stored on this machine</span>
-          </div>
-          <div className="settings-grid">
-            <label>
-              Focus
-              <input
-                type="number"
-                min={1}
-                value={settings.workMinutes}
-                onChange={(event) => updateSetting('workMinutes', Number(event.target.value))}
-              />
-            </label>
-            <label>
-              Short
-              <input
-                type="number"
-                min={1}
-                value={settings.shortBreakMinutes}
-                onChange={(event) => updateSetting('shortBreakMinutes', Number(event.target.value))}
-              />
-            </label>
-            <label>
-              Long
-              <input
-                type="number"
-                min={1}
-                value={settings.longBreakMinutes}
-                onChange={(event) => updateSetting('longBreakMinutes', Number(event.target.value))}
-              />
-            </label>
-            <label>
-              Long break every
-              <input
-                type="number"
-                min={2}
-                value={settings.longBreakInterval}
-                onChange={(event) => updateSetting('longBreakInterval', Number(event.target.value))}
-              />
-            </label>
-          </div>
-          <div className="toggle-list">
-            <label>
-              <input
-                type="checkbox"
-                checked={settings.autoStartBreaks}
-                onChange={(event) => updateSetting('autoStartBreaks', event.target.checked)}
-              />
-              Auto-start breaks
-            </label>
-            <label>
-              <input
-                type="checkbox"
-                checked={settings.autoStartWork}
-                onChange={(event) => updateSetting('autoStartWork', event.target.checked)}
-              />
-              Auto-start focus rounds
-            </label>
-            <label>
-              <input
-                type="checkbox"
-                checked={settings.notificationsEnabled}
-                onChange={(event) => updateSetting('notificationsEnabled', event.target.checked)}
-              />
-              Desktop notifications
-            </label>
-            <label>
-              <input
-                type="checkbox"
-                checked={settings.soundEnabled}
-                onChange={(event) => updateSetting('soundEnabled', event.target.checked)}
-              />
-              Chime on transition
-            </label>
-          </div>
-        </article>
+      {activeTab === 'timer' ? (
+        <section className="workspace">
+          <article className="panel settings-panel">
+            <div className="panel-head">
+              <h2>Session setup</h2>
+              <span>Stored on this machine</span>
+            </div>
+            <div className="settings-grid">
+              <label>
+                Focus
+                <input
+                  type="number"
+                  min={1}
+                  value={settings.workMinutes}
+                  onChange={(event) => updateSetting('workMinutes', Number(event.target.value))}
+                />
+              </label>
+              <label>
+                Short
+                <input
+                  type="number"
+                  min={1}
+                  value={settings.shortBreakMinutes}
+                  onChange={(event) => updateSetting('shortBreakMinutes', Number(event.target.value))}
+                />
+              </label>
+              <label>
+                Long
+                <input
+                  type="number"
+                  min={1}
+                  value={settings.longBreakMinutes}
+                  onChange={(event) => updateSetting('longBreakMinutes', Number(event.target.value))}
+                />
+              </label>
+              <label>
+                Long break every
+                <input
+                  type="number"
+                  min={2}
+                  value={settings.longBreakInterval}
+                  onChange={(event) => updateSetting('longBreakInterval', Number(event.target.value))}
+                />
+              </label>
+            </div>
+            <div className="toggle-list">
+              <label>
+                <input
+                  type="checkbox"
+                  checked={settings.autoStartBreaks}
+                  onChange={(event) => updateSetting('autoStartBreaks', event.target.checked)}
+                />
+                Auto-start breaks
+              </label>
+              <label>
+                <input
+                  type="checkbox"
+                  checked={settings.autoStartWork}
+                  onChange={(event) => updateSetting('autoStartWork', event.target.checked)}
+                />
+                Auto-start focus rounds
+              </label>
+              <label>
+                <input
+                  type="checkbox"
+                  checked={settings.notificationsEnabled}
+                  onChange={(event) => updateSetting('notificationsEnabled', event.target.checked)}
+                />
+                Desktop notifications
+              </label>
+              <label>
+                <input
+                  type="checkbox"
+                  checked={settings.soundEnabled}
+                  onChange={(event) => updateSetting('soundEnabled', event.target.checked)}
+                />
+                Chime on transition
+              </label>
+            </div>
+          </article>
 
-        <article className="panel history-panel">
-          <div className="panel-head">
-            <h2>Recent rounds</h2>
-            <span>{history.length} stored events</span>
-          </div>
-          <div className="history-list">
-            {history.length === 0 ? (
-              <p className="empty">Finish a session to start building your rhythm log.</p>
-            ) : (
-              history.map((entry) => (
-                <div className="history-item" key={`${entry.completedAt}-${entry.mode}`}>
-                  <div>
-                    <strong>{MODES.find((item) => item.mode === entry.mode)?.label}</strong>
-                    <span>{new Date(entry.completedAt).toLocaleString()}</span>
+          <article className="panel history-panel">
+            <div className="panel-head">
+              <h2>Recent rounds</h2>
+              <span>{history.length} stored events</span>
+            </div>
+            <div className="history-list">
+              {history.length === 0 ? (
+                <p className="empty">Finish a session to start building your rhythm log.</p>
+              ) : (
+                history.map((entry) => (
+                  <div className="history-item" key={`${entry.completedAt}-${entry.mode}`}>
+                    <div>
+                      <strong>{MODES.find((item) => item.mode === entry.mode)?.label}</strong>
+                      <span>{new Date(entry.completedAt).toLocaleString()}</span>
+                    </div>
+                    <span>{formatSeconds(entry.durationSeconds)}</span>
                   </div>
-                  <span>{formatSeconds(entry.durationSeconds)}</span>
-                </div>
-              ))
-            )}
-          </div>
-        </article>
-      </section>
+                ))
+              )}
+            </div>
+          </article>
+        </section>
+      ) : (
+        <section className="workspace analytics">
+          <article className="panel analytics-panel">
+            <div className="panel-head">
+              <h2>Analytics</h2>
+              <span>{analytics.rangeLabel}</span>
+            </div>
+            <div className="analytics-grid">
+              <div className="metric-card">
+                <div className="metric-label">Focus minutes</div>
+                <div className="metric-value">{analytics.focusMinutes}</div>
+                <div className="metric-meta">Total focus time</div>
+              </div>
+              <div className="metric-card">
+                <div className="metric-label">Break minutes</div>
+                <div className="metric-value">{analytics.breakMinutes}</div>
+                <div className="metric-meta">Recovery time</div>
+              </div>
+              <div className="metric-card">
+                <div className="metric-label">Focus sessions</div>
+                <div className="metric-value">{analytics.focusSessions}</div>
+                <div className="metric-meta">Completed rounds</div>
+              </div>
+              <div className="metric-card">
+                <div className="metric-label">Total sessions</div>
+                <div className="metric-value">{analytics.totalSessions}</div>
+                <div className="metric-meta">Work + breaks</div>
+              </div>
+              <div className="metric-card">
+                <div className="metric-label">Active days</div>
+                <div className="metric-value">{analytics.activeDays}</div>
+                <div className="metric-meta">Days with focus</div>
+              </div>
+              <div className="metric-card">
+                <div className="metric-label">Current streak</div>
+                <div className="metric-value">{analytics.currentStreak}</div>
+                <div className="metric-meta">Consecutive days</div>
+              </div>
+            </div>
+          </article>
+        </section>
+      )}
     </main>
   )
 }

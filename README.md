@@ -53,11 +53,19 @@ Local macOS packaging runs `pnpm run prepare:icons` as part of `pnpm pack` and `
 
 - Standard desktop window
 - Minimize-to-tray with tray controls (show/hide, start/pause, reset, quit)
+- Analytics dashboard (last 7 days overview)
 - Focus, short break, and long break modes
 - Start, pause, and reset controls
 - Local settings and timer persistence
 - Native desktop notifications
 - Lightweight recent-session history
+
+## Release Branch Flow
+
+- Create `chore/release-X.Y.Z` from `main`
+- Fixes branch from the release branch as `fix/<scope>` and merge back via PRs
+- Merge the release PR into `main`
+- Create the release tag in GitHub (UI or CLI) to trigger Actions
 
 ## Next Iteration Ideas
 
