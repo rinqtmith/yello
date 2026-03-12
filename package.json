@@ -44,6 +44,12 @@
       "out/**",
       "assets/**"
     ],
+    "publish": [
+      {
+        "provider": "github",
+        "releaseType": "release"
+      }
+    ],
     "directories": {
       "output": "dist"
     },
