@@ -20,6 +20,8 @@ If a machine already installed dependencies before that setting existed and `pnp
 
 - `pnpm rebuild electron esbuild`
 
+On Linux development machines, `pnpm dev` and `pnpm preview` automatically start Electron with `--noSandbox` for unpackaged runs to avoid `chrome-sandbox` SUID helper failures. Set `YELLO_ENABLE_SANDBOX=1` if you need to test local dev with sandboxing enabled.
+
 ## Releases
 
 Releases are built and published by GitHub Actions on version tags.
@@ -53,11 +55,19 @@ Local macOS packaging runs `pnpm run prepare:icons` as part of `pnpm pack` and `
 
 - Standard desktop window
 - Minimize-to-tray with tray controls (show/hide, start/pause, reset, quit)
+- Analytics dashboard (last 7 days overview)
 - Focus, short break, and long break modes
 - Start, pause, and reset controls
 - Local settings and timer persistence
 - Native desktop notifications
 - Lightweight recent-session history
+
+## Release Branch Flow
+
+- Create `chore/release-X.Y.Z` from `main`
+- Fixes branch from the release branch as `fix/<scope>` and merge back via PRs
+- Merge the release PR into `main`
+- Create the release tag in GitHub (UI or CLI) to trigger Actions
 
 ## Next Iteration Ideas
 

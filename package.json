@@ -1,6 +1,6 @@
 {
   "name": "yello",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "private": true,
   "description": "A playful local-first Pomodoro desktop app built with Electron and React.",
   "main": "./out/main/index.js",
@@ -9,8 +9,9 @@
   "author": "rinqtf",
   "license": "MIT",
   "scripts": {
-    "dev": "electron-vite dev",
+    "dev": "node scripts/run-electron-vite.mjs dev",
     "build": "pnpm typecheck && electron-vite build",
+    "preview": "node scripts/run-electron-vite.mjs preview",
     "prepare:icons": "bash scripts/prepare-icons.sh",
     "pack": "pnpm run prepare:icons && electron-vite build && electron-builder --publish never",
     "release": "pnpm run prepare:icons && electron-vite build && electron-builder --publish always",
