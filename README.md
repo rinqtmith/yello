@@ -20,7 +20,7 @@ If a machine already installed dependencies before that setting existed and `pnp
 
 - `pnpm rebuild electron esbuild`
 
-On Linux development machines, Yello disables Electron's Chromium sandbox automatically for unpackaged runs to avoid `chrome-sandbox` SUID helper failures. Set `YELLO_ENABLE_SANDBOX=1` if you need to test local dev with sandboxing enabled.
+On Linux development machines, `pnpm dev` and `pnpm preview` automatically start Electron with `--noSandbox` for unpackaged runs to avoid `chrome-sandbox` SUID helper failures. Set `YELLO_ENABLE_SANDBOX=1` if you need to test local dev with sandboxing enabled.
 
 ## Releases
 
