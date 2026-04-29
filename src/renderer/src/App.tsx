@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { DEFAULT_CONFIG, createInitialTimerState } from '@shared/defaults'
 import { getLocalDateKey, summarizeSessions } from '@shared/analytics'
+import { trimHistory } from '@shared/history'
 import { rehydrateTimerState } from '@shared/timer'
 import type { SessionRecord, StorageShape, TimerConfig, TimerMode, TimerState } from '@shared/types'
 import {
@@ -29,13 +30,8 @@ const MODES: { label: string; mode: TimerMode }[] = [
 
 const clampSeconds = (value: number, max: number) => Math.min(Math.max(0, value), max)
 const HISTORY_RETENTION_DAYS = 30
-
-const getRetentionCutoff = (now: number, days: number) => {
-  const start = new Date(now)
-  start.setHours(0, 0, 0, 0)
-  start.setDate(start.getDate() - (days - 1))
-  return start.getTime()
-}
+const HISTORY_MAX_ENTRIES = 1500
+const HISTORY_DISPLAY_LIMIT = 50
 
 const playChime = () => {
   const context = new AudioContext()
@@ -80,13 +76,17 @@ export const App = () => {
       }
 
       const restoredTimerState = rehydrateTimerState(storage.timerState, storage.settings, Date.now())
+      const trimmedHistory = trimHistory(storage.history, Date.now(), {
+        retentionDays: HISTORY_RETENTION_DAYS,
+        maxEntries: HISTORY_MAX_ENTRIES
+      })
 
       setSettings(storage.settings)
       setTimerState(restoredTimerState)
       setDisplayRemainingSeconds(
         clampSeconds(restoredTimerState.remainingSeconds, getDurationSeconds(storage.settings, restoredTimerState.mode))
       )
-      setHistory(storage.history)
+      setHistory(trimmedHistory)
       setAppVersion(version)
       setHydrated(true)
     }
@@ -177,10 +177,9 @@ export const App = () => {
       }
 
       setHistory((existing) => {
-        const cutoff = getRetentionCutoff(Date.now(), HISTORY_RETENTION_DAYS)
-        return [completion.sessionRecord, ...existing].filter((entry) => {
-          const timestamp = new Date(entry.completedAt).getTime()
-          return Number.isFinite(timestamp) && timestamp >= cutoff
+        return trimHistory([completion.sessionRecord, ...existing], Date.now(), {
+          retentionDays: HISTORY_RETENTION_DAYS,
+          maxEntries: HISTORY_MAX_ENTRIES
         })
       })
       return completion.nextState
@@ -298,6 +297,7 @@ export const App = () => {
   }, [])
 
   const analytics = useMemo(() => summarizeSessions(history, new Date(), 7), [history, analyticsDayKey])
+  const visibleHistory = useMemo(() => history.slice(0, HISTORY_DISPLAY_LIMIT), [history])
 
   return (
     <main className="shell">
@@ -449,13 +449,15 @@ export const App = () => {
           <article className="panel history-panel">
             <div className="panel-head">
               <h2>Recent rounds</h2>
-              <span>{history.length} stored events</span>
+              <span>
+                Showing {visibleHistory.length} of {history.length} stored events
+              </span>
             </div>
             <div className="history-list">
               {history.length === 0 ? (
                 <p className="empty">Finish a session to start building your rhythm log.</p>
               ) : (
-                history.map((entry) => (
+                visibleHistory.map((entry) => (
                   <div className="history-item" key={`${entry.completedAt}-${entry.mode}`}>
                     <div>
                       <strong>{MODES.find((item) => item.mode === entry.mode)?.label}</strong>
