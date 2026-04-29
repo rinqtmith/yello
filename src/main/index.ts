@@ -4,6 +4,17 @@ import { readFileSync } from 'node:fs'
 import { AppStore } from './store'
 import type { SessionNotificationPayload, SessionRecord, TimerConfig, TimerState, TrayCommand } from '../shared/types'
 
+const shouldDisableSandbox =
+  process.platform === 'linux' &&
+  !app.isPackaged &&
+  process.env.YELLO_ENABLE_SANDBOX !== '1'
+
+if (shouldDisableSandbox) {
+  // Local Linux dev often lacks a correctly configured chrome-sandbox helper.
+  app.commandLine.appendSwitch('no-sandbox')
+  app.commandLine.appendSwitch('disable-setuid-sandbox')
+}
+
 const store = new AppStore()
 let mainWindow: BrowserWindow | null = null
 let tray: Tray | null = null
